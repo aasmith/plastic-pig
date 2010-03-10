@@ -15,6 +15,13 @@ class ::Range
   end
 end
 
+class Float
+  def places(n=2)
+    n = 10 ** n.to_f
+    (self * n).truncate / n
+  end
+end
+
 module PlasticPig
   RSI_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=rsi;range=1y/json?period=14"
   PRICE_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=quote;range=1y/json/"
@@ -127,12 +134,16 @@ module PlasticPig
       price - entry.price
     end
 
+    def profit_percent
+      profit.to_f / entry.price
+    end
+
     def summary
       <<-SUMMARY
         Exit at end of day #{day.date} @ $#{day.close};
          Reason: #{reason}
          Strategy: #{strategy.respond_to?(:name) ? strategy.name : strategy.class.name}
-         Profit: $#{profit}
+         Profit: $#{profit.places(2)} (#{(profit_percent * 100).places(2)}%)
       SUMMARY
     end
   end
