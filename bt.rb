@@ -5,6 +5,16 @@ require 'open-uri'
 require 'rubygems'
 require 'json'
 
+class ::Range
+  def crossed_below?(n)
+    first > n and last < n
+  end
+
+  def crossed_above?(n)
+    first < n and last > n
+  end
+end
+
 module PlasticPig
   RSI_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=rsi;range=1y/json?period=14"
   PRICE_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=quote;range=1y/json/"
@@ -82,11 +92,7 @@ module PlasticPig
   end
 
   class Entry
-    attr_accessor :day, :reason, :exits
-
-    def initialize
-      @exits = []
-    end
+    attr_accessor :day, :reason, :exit, :strategy
 
     def price
       day.open
@@ -97,15 +103,21 @@ module PlasticPig
 
       summaries << "Entered at start of day #{day.date} @ $#{day.open}"
       summaries << "Reason: #{reason}"
-      summaries << "Entry generated #{exits.size} exits:"
-      exits.each { |x| summaries << x.summary }
+      summaries << "Strategy: #{strategy.respond_to?(:name) ? strategy.name : strategy.class.name}"
+
+      if exit
+        summaries << "Exit Summary:"
+        summaries << exit.summary
+      else
+        summaries << "No exit was generated."
+      end
 
       summaries.join("\n")
     end
   end
 
   class Exit
-    attr_accessor :day, :reason, :entry
+    attr_accessor :day, :reason, :entry, :strategy
 
     def price
       day.close
@@ -119,8 +131,71 @@ module PlasticPig
       <<-SUMMARY
         Exit at end of day #{day.date} @ $#{day.close};
          Reason: #{reason}
+         Strategy: #{strategy.respond_to?(:name) ? strategy.name : strategy.class.name}
          Profit: $#{profit}
       SUMMARY
+    end
+  end
+
+  # Strategies
+
+  class RsiClassic
+    attr_accessor :exit_type
+
+    EXITS = {
+      :exp_3  => lambda { |day, days_from_entry| days_from_entry == 3 },
+      :exp_5  => lambda { |day, days_from_entry| days_from_entry == 5 },
+      :exp_10 => lambda { |day, days_from_entry| days_from_entry == 10 },
+      :rsi_70 => lambda { |day, days_from_entry| (day.previous.rsi..day.rsi).crossed_above?(70) },
+      :rsi_40 => lambda { |day, days_from_entry| (day.previous.rsi..day.rsi).crossed_below?(40) }
+    }
+
+    REASONS = {
+      :exp_3  => "Expired after 3 days.",
+      :exp_5  => "Expired after 5 days.",
+      :exp_10 => "Expired after 10 days.",
+      :rsi_70 => "RSI crossed above 70",
+      :rsi_40 => "RSI dropped below 40."
+    }
+
+    def initialize(exit_type)
+      raise "invalid exit_type #{exit_type.inspect}" unless EXITS.include?(exit_type)
+
+      @exit_type = exit_type
+    end
+
+    def enter?(day)
+      if day.previous.rsi < 55 and day.rsi > 55
+        "RSI crossed above 55 from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
+      end
+    end
+
+    def exit?(day, days_from_entry)
+      REASONS[exit_type] if EXITS[exit_type].call(day, days_from_entry)
+    end
+
+    def name
+      "RSI Classic: #{exit_type}"
+    end
+  end
+
+  class RsiAgita
+    ENTER_RSI = [5,10,15,20,25,30,35,40]
+
+    def enter?(day)
+      rsi = ENTER_RSI.detect { |n| (day.previous.rsi..day.rsi).crossed_below?(n) }
+
+      if rsi
+        "RSI crossed below #{rsi} from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
+      end
+    end
+
+    def exit?(day, days_from_entry)
+      x = (day.previous.rsi..day.rsi).crossed_above?(65)
+
+      if x
+        "RSI crossed above 65 from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
+      end
     end
   end
 end
@@ -140,60 +215,57 @@ end
 
 head = PlasticPig::DayFactory.build_list(prices_and_rsi)
 
-#head.each { |d| puts d.inspect }
+def find_entries(head, strategies)
+  entries = []
 
-entries = []
+  head.each do |day|
+    if day.previous
+      strategies.each do |strategy|
+        reason = strategy.enter?(day)
 
-head.each do |day|
-  if day.previous
-    if day.previous.rsi < 55 and day.rsi > 55
-      entry = PlasticPig::Entry.new
-      entry.reason = "RSI crossed 55 from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
-      entry.day = day.next
+        if reason
+          entry = PlasticPig::Entry.new
+          entry.strategy = strategy
+          entry.reason = reason
+          entry.day = day.next
 
-      entries << entry
+          entries << entry
+        end
+      end
+    end
+  end
+
+  entries
+end
+
+def find_exits(entries, strategies)
+  entries.each do |entry|
+    entry.day.each_with_index do |day, i|
+      strategies.each do |strategy|
+        reason = entry.strategy == strategy && strategy.exit?(day, i + 1)
+
+        if reason
+          x = PlasticPig::Exit.new
+          x.strategy = strategy
+          x.reason = reason
+          x.entry = entry
+          x.day = day
+
+          entry.exit = x
+        end
+      end
+
+      break if entry.exit
     end
   end
 end
 
-entries.each do |entry|
-  low_rsi, high_rsi = false
+strategies = []
+strategies << PlasticPig::RsiClassic.new(:rsi_70)
+strategies << PlasticPig::RsiAgita.new
 
-  entry.day.each_with_index do |day,i|
-    
-    # pick off the 3rd, 5th and 10th days
-    if [2,4,9].include?(i)
-      x = PlasticPig::Exit.new
-      x.day = day
-      x.reason = "Expired after #{i+1} days"
-      x.entry = entry
-
-      entry.exits << x
-    end
-
-    # find days when the rsi moved > 70 or < 40.
-    if day.rsi < 40 && !low_rsi
-      x = PlasticPig::Exit.new
-      x.day = day
-      x.reason = "RSI dropped to below 40"
-      x.entry = entry
-
-      entry.exits << x
-      low_rsi = true
-
-    elsif day.rsi > 70 && !high_rsi
-      x = PlasticPig::Exit.new
-      x.day = day
-      x.reason = "RSI rose above 70"
-      x.entry = entry
-
-      entry.exits << x
-      high_rsi = true
-    end
-
-    break if i >= 9 && high_rsi && low_rsi
-  end
-end
+entries = find_entries(head, strategies)
+find_exits(entries, strategies)
 
 entries.each { |e| puts "="*80, e.summary, "" }
 
