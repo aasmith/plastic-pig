@@ -201,17 +201,26 @@ module PlasticPig
 end
 
 symbol = ARGV[0] or raise "need symbol"
+max_date = ARGV[1]
 
 price_series = PlasticPig::YahooFetcher.new(PlasticPig::PRICE_URL % symbol).fetch
 rsi_series = PlasticPig::YahooFetcher.new(PlasticPig::RSI_URL % symbol).fetch
 
+if max_date
+  [rsi_series, price_series].each{ |a| a.reject!{|s| s["Date"] > max_date.to_i } }
+end
+
 prices_and_rsi = price_series.zip(rsi_series).map do |price, rsi|
-  unless price["Date"] == rsi["Date"]
-    raise "Loading error, series do not align on dates."
+  if max_date
+    next if !price || !rsi
+  else
+    unless price["Date"] == rsi["Date"]
+      raise "Loading error, series do not align on dates. #{price["Date"]} v #{rsi["Date"]}"
+    end
   end
 
   price.merge(rsi)
-end
+end.compact
 
 head = PlasticPig::DayFactory.build_list(prices_and_rsi)
 
