@@ -226,9 +226,33 @@ module PlasticPig
   end
 end
 
+def help
+  puts <<-HELP
+Backtester, Copyright Andrew A. Smith, 2010.
+
+SYNOPSIS
+  ruby bt.rb symbol [-h] [-r range] [-m max_date]
+
+DESCRIPTION
+  Backtests a stock symbol against a predefined set of trading
+  strategies.
+
+OPTIONS
+  -h\tDisplay this message.
+  -m\tProcess series up to and including specified max_date.
+  -r\tLoad series data using the specified range. Valid
+    \tvalues are 5d 3m 6m 1y 2y 5y. Default is 1y.
+
+  HELP
+  abort
+end
+
+help if ARGV.any?{|e|e =~ /^-h$/ }
 symbol = ARGV[0] or raise "need symbol"
-max_date = ARGV.select{|e|e =~ /-m(\d+)/} && $1
-range = ARGV.select{|e|e =~ /-r(\d+\w)/} && $1 || "1y"
+
+args = ARGV.join(" ")
+max_date = args.select{ |e| e =~ /-m (\d+)/}   && $1
+range    = args.select{ |e| e =~ /-r (\d+\w)/} && $1 || "1y"
 
 price_series = PlasticPig::YahooFetcher.new(PlasticPig::PRICE_URL % [symbol, range]).fetch
 rsi_series = PlasticPig::YahooFetcher.new(PlasticPig::RSI_URL % [symbol, range]).fetch
