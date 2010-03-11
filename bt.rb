@@ -227,23 +227,7 @@ module PlasticPig
 end
 
 def help
-  puts <<-HELP
-Backtester, Copyright Andrew A. Smith, 2010.
-
-SYNOPSIS
-  ruby bt.rb symbol [-h] [-r range] [-m max_date]
-
-DESCRIPTION
-  Backtests a stock symbol against a predefined set of trading
-  strategies.
-
-OPTIONS
-  -h\tDisplay this message.
-  -m\tProcess series up to and including specified max_date.
-  -r\tLoad series data using the specified range. Valid
-    \tvalues are 5d 3m 6m 1y 2y 5y. Default is 1y.
-
-  HELP
+  puts File.read("README")
   abort
 end
 
