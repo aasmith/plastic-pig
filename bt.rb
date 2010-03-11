@@ -144,12 +144,20 @@ module PlasticPig
     end
 
     def summary
-      <<-SUMMARY
-        Exit at end of day #{day.date} @ $#{day.close};
-         Reason: #{reason}
-         Strategy: #{strategy.respond_to?(:name) ? strategy.name : strategy.class.name}
-         Profit: $#{profit.places(2)} (#{(profit_percent * 100).places(2)}%)
-      SUMMARY
+      summary = []
+
+      if day
+        summary << "Exit at start of day #{day.date} @ $#{day.open};"
+      else
+        summary << "EXIT NEXT TRADING DAY AT OPEN"
+      end
+
+      summary << "Reason: #{reason}"
+      summary << "Strategy: #{strategy.respond_to?(:name) ? strategy.name : strategy.class.name}"
+
+      summary << "Profit: $#{profit.places(2)} (#{(profit_percent * 100).places(2)}%)" if day
+
+      summary.map{|s| "\t#{s}"}.join("\n")
     end
   end
 
@@ -187,7 +195,9 @@ module PlasticPig
     end
 
     def exit?(day, days_from_entry)
-      REASONS[exit_type] if EXITS[exit_type].call(day, days_from_entry)
+      if EXITS[exit_type].call(day, days_from_entry)
+        REASONS[exit_type] + " on #{day.date}"
+      end
     end
 
     def name
@@ -272,7 +282,7 @@ def find_exits(entries, strategies)
           x.strategy = strategy
           x.reason = reason
           x.entry = entry
-          x.day = day
+          x.day = day.next
 
           entry.exit = x
         end
