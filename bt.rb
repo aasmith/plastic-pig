@@ -223,23 +223,18 @@ range = ARGV.select{|e|e =~ /-r(\d+\w)/} && $1 || "1y"
 price_series = PlasticPig::YahooFetcher.new(PlasticPig::PRICE_URL % [symbol, range]).fetch
 rsi_series = PlasticPig::YahooFetcher.new(PlasticPig::RSI_URL % [symbol, range]).fetch
 
-if max_date
-  [rsi_series, price_series].each{ |a| a.reject!{|s| s["Date"] > max_date.to_i } }
+series = []
+
+# Load data where data occurs only in both series for a given date.
+price_series.each do |price|
+  rsi = rsi_series.detect { |rsi| price["Date"] == rsi["Date"] }
+
+  series << price.merge(rsi) if rsi
 end
 
-prices_and_rsi = price_series.zip(rsi_series).map do |price, rsi|
-  if max_date
-    next if !price || !rsi
-  else
-    unless price["Date"] == rsi["Date"]
-      raise "Loading error, series do not align on dates. #{price["Date"]} v #{rsi["Date"]}"
-    end
-  end
+series.reject!{|s| s["Date"] > max_date.to_i } if max_date
 
-  price.merge(rsi)
-end.compact
-
-head = PlasticPig::DayFactory.build_list(prices_and_rsi)
+head = PlasticPig::DayFactory.build_list(series)
 
 def find_entries(head, strategies)
   entries = []
