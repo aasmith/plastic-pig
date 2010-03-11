@@ -23,8 +23,8 @@ class Float
 end
 
 module PlasticPig
-  RSI_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=rsi;range=1y/json?period=14"
-  PRICE_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=quote;range=1y/json/"
+  RSI_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=rsi;range=%s/json?period=14"
+  PRICE_URL = "http://chartapi.finance.yahoo.com/instrument/1.0/%s/chartdata;type=quote;range=%s/json/"
 
   class YahooFetcher
     attr_reader :url
@@ -217,10 +217,11 @@ module PlasticPig
 end
 
 symbol = ARGV[0] or raise "need symbol"
-max_date = ARGV[1]
+max_date = ARGV.select{|e|e =~ /-m(\d+)/} && $1
+range = ARGV.select{|e|e =~ /-r(\d+\w)/} && $1 || "1y"
 
-price_series = PlasticPig::YahooFetcher.new(PlasticPig::PRICE_URL % symbol).fetch
-rsi_series = PlasticPig::YahooFetcher.new(PlasticPig::RSI_URL % symbol).fetch
+price_series = PlasticPig::YahooFetcher.new(PlasticPig::PRICE_URL % [symbol, range]).fetch
+rsi_series = PlasticPig::YahooFetcher.new(PlasticPig::RSI_URL % [symbol, range]).fetch
 
 if max_date
   [rsi_series, price_series].each{ |a| a.reject!{|s| s["Date"] > max_date.to_i } }
