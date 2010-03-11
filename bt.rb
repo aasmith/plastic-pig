@@ -298,6 +298,8 @@ C     most active
 EEM   6 most active, ishares emerging
 EDC   3x emerging
 QQQQ  nasdaq
+QLD   2x nasdaq
+TQQQ  3x nasdaq
 TNA   3x russ 2000
 F
 

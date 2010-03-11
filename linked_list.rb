@@ -1,3 +1,5 @@
+# Linked list implementation Copyright 2008 Aaron Patterson and Andrew Smith.
+
 module PlasticPig
   module LinkedList
     include Enumerable
