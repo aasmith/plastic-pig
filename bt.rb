@@ -108,7 +108,12 @@ module PlasticPig
     def summary
       summaries = []
 
-      summaries << "Entered at start of day #{day.date} @ $#{day.open}"
+      if day
+        summaries << "Entered at start of day #{day.date} @ $#{day.open}"
+      else
+        summaries << "ENTER NEXT TRADING DAY AT OPEN"
+      end
+
       summaries << "Reason: #{reason}"
       summaries << "Strategy: #{strategy.respond_to?(:name) ? strategy.name : strategy.class.name}"
 
@@ -260,6 +265,8 @@ end
 
 def find_exits(entries, strategies)
   entries.each do |entry|
+    next unless entry.day
+
     entry.day.each_with_index do |day, i|
       strategies.each do |strategy|
         reason = entry.strategy == strategy && strategy.exit?(day, i + 1)
