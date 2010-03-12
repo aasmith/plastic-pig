@@ -39,7 +39,21 @@ strategies << PlasticPig::Strategies::RsiAgita.new
 bt = PlasticPig::BackTester.new(head, strategies)
 entries = bt.run
 
-entries.each { |e| puts "="*80, e.summary, "" }
+entries.each { |e| puts "-"*80, e.summary, "" }
+
+puts "="*80
+puts "Used data ranging from #{head.date} to #{head.last.date}"
+
+exits = entries.select { |e| e.exit }
+puts "Found #{entries.size} entries, with #{exits.size} exits."
+
+# Unique exits are important because it demonstrates how 
+# often a strategy is likely to work. If a strategy returns a 
+# high number of entries, but a low number of unique exits, then
+# it may be a sign that the exit condition may have be fluke, and 
+# is unlikely to be reproducable.
+uniqs = exits.map{|e|e.exit.day if e.exit}.compact.uniq
+puts "There were #{uniqs.size} (#{(uniqs.size / exits.size.to_f * 100).places(2)}%) unique exit dates."
 
 __END__
 interesting: 
