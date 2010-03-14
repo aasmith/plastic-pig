@@ -21,11 +21,11 @@ module PlasticPig
           d = Day.new
           d.date = hash["Date"]
 
-        %w(open high low close volume rsi).each do |a|
-          d.send(:"#{a}=", hash[a])
-        end
+          %w(open high low close volume rsi).each do |a|
+            d.send(:"#{a}=", hash[a])
+          end
 
-        d
+          d
         end
       end
     end
