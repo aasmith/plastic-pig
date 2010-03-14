@@ -52,14 +52,11 @@ series = []
 raw_series.first.each do |row|
   date = row["Date"]
 
-  # Equiv of:
-  # all_data_for_date = raw_series.map{|rs| rs.detect{|r| r["Date"] == date } }
-  # but faster because source array is slowly deleted from, reducing search space.
-  all_data_for_date = []
-  raw_series.each{|rs| rs.delete_if{|r| r["Date"] == date && all_data_for_date << r } }
+  # Slow.
+  all_data_for_date = raw_series.map{|rs| rs.detect{|r| r["Date"] == date } }
 
   # skip if not all data available for date
-  unless all_data_for_date.size == raw_series.size
+  unless all_data_for_date.compact.size == raw_series.size
     puts "skipping incomplete date #{date}"
     next
   end
