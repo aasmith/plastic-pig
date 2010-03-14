@@ -21,7 +21,7 @@ module PlasticPig
           d = Day.new
           d.date = hash["Date"]
 
-          %w(open high low close volume rsi).each do |a|
+          (Day::VARS - %w(date)).each do |a|
             d.send(:"#{a}=", hash[a])
           end
 

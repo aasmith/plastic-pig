@@ -3,7 +3,13 @@ module PlasticPig
     class Day
       include LinkedList
 
-      VARS = [:date, :open, :high, :low, :close, :volume, :rsi]
+      VARS = %w(
+        date open high low close volume
+        rsi
+        sma
+        macd macd_divergence macd_signal
+        stochasticslow_signal stochasticslow_stochastic
+      )
       attr_accessor *VARS
 
       def parsed_date
