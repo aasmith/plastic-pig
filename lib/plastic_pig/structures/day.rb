@@ -19,7 +19,7 @@ module PlasticPig
       def inspect
         pairs = VARS.map{|v| "#{v}=#{send(v.to_sym).inspect}" }
 
-      "<Day: #{pairs.join(",")}>"
+        "<Day: #{pairs.join(",")}>"
       end
     end
   end

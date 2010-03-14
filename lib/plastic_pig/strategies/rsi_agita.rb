@@ -7,7 +7,7 @@ module PlasticPig
         rsi = ENTER_RSI.detect { |n| (day.previous.rsi..day.rsi).crossed_below?(n) }
 
         if rsi
-        "RSI crossed below #{rsi} from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
+          "RSI crossed below #{rsi} from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
         end
       end
 
@@ -15,7 +15,7 @@ module PlasticPig
         x = (day.previous.rsi..day.rsi).crossed_above?(65)
 
         if x
-        "RSI crossed above 65 from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
+          "RSI crossed above 65 from #{day.previous.rsi} to #{day.rsi} on #{day.date}"
         end
       end
     end
