@@ -72,6 +72,8 @@ series.reject!{|s| s["Date"] > max_date.to_i } if max_date
 head = PlasticPig::Structures::DayFactory.build_list(series)
 
 strategies = []
+strategies << PlasticPig::Strategies::SimpleMacd.new
+strategies << PlasticPig::Strategies::DoubleCross.new
 strategies << PlasticPig::Strategies::RsiClassic.new(:rsi_70)
 strategies << PlasticPig::Strategies::RsiAgita.new
 
